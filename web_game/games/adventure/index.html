@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>幻境探索 - MyWeb游戏平台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff;user-select:none}
+#c{display:block;width:100vw;height:100vh}
+.hud{position:fixed;z-index:10;pointer-events:none}
+.h-hp{top:20px;left:20px}.hp-o{width:180px;height:10px;background:rgba(0,0,0,.5);border-radius:5px;border:1px solid rgba(255,255,255,.15)}.hp-i{height:100%;background:linear-gradient(90deg,#4ade80,#22c55e);border-radius:5px;transition:width .3s;width:100%}.hp-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px}
+.h-stats{top:20px;right:20px;text-align:right;font-size:13px;color:rgba(255,255,255,.5);line-height:1.8}.h-stats span{color:#ffd700;font-weight:800}
+.h-inv{bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.inv-s{width:50px;height:50px;border-radius:10px;background:rgba(0,0,0,.4);border:1.5px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative}
+.inv-s .ct{position:absolute;bottom:2px;right:4px;font-size:10px;color:#ffd700;font-weight:800}
+.h-msg{top:45%;left:50%;transform:translate(-50%,-50%);font-size:16px;font-weight:700;text-align:center;opacity:0;transition:opacity .3s;text-shadow:0 2px 8px rgba(0,0,0,.6);padding:10px 24px;border-radius:10px;background:rgba(0,0,0,.4)}.h-msg.show{opacity:1}
+.h-quest{top:20px;left:50%;transform:translateX(-50%);font-size:13px;color:rgba(255,255,255,.5);background:rgba(0,0,0,.3);padding:6px 20px;border-radius:20px;border:1px solid rgba(255,255,255,.06)}
+.h-mm{top:60px;right:20px;width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.08);overflow:hidden;background:rgba(0,0,0,.3)}
+#mm{width:100%;height:100%;border-radius:50%}
+.h-keys{bottom:20px;left:20px;font-size:10px;color:rgba(255,255,255,.2);line-height:1.6}
+.ch{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:10;width:6px;height:6px;border:1.5px solid rgba(255,255,255,.5);border-radius:50%}
+.ch.atk{border-color:#f55;width:10px;height:10px;border-width:2px}
+.df{position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse,transparent 40%,rgba(255,0,0,.3) 100%);opacity:0;transition:opacity .2s}.df.show{opacity:1}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:16px;backdrop-filter:blur(8px)}
+.ov h1{font-size:3rem;font-weight:900}.ov h1 .ac{background:linear-gradient(90deg,#4ade80,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ov p{color:rgba(255,255,255,.45);font-size:14px;max-width:420px;text-align:center;line-height:1.8}
+.ov button{padding:16px 48px;border:2px solid rgba(255,255,255,.15);border-radius:4px;font-size:16px;font-weight:800;cursor:pointer;color:#fff;background:rgba(255,255,255,.04);transition:.2s;text-transform:uppercase;letter-spacing:3px}
+.ov button:hover{background:rgba(255,255,255,.12);border-color:rgba(74,222,128,.4);color:#4ade80}
+.bk{color:rgba(255,255,255,.35);text-decoration:none;font-size:13px;padding:10px 24px;border:1px solid rgba(255,255,255,.08);border-radius:4px;margin-top:10px;display:inline-block;transition:.2s}
+.bk:hover{background:rgba(255,255,255,.05)}
+.hidden{display:none!important}
+.loading{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:200;font-size:18px;color:rgba(255,255,255,.5)}
+</style>
+</head>
+<body>
+<div class="loading" id="loading">加载 Three.js 引擎中...</div>
+<canvas id="c"></canvas>
+<div class="ch" id="crosshair"></div>
+<div class="hud h-hp"><div class="hp-o"><div class="hp-i" id="hpBar"></div></div><div class="hp-l">HP <span id="hpVal">100</span>/100</div></div>
+<div class="hud h-stats">💎 <span id="gems">0</span>/12<br>⚔ <span id="kills">0</span><br>🏆 <span id="score">0</span></div>
+<div class="hud h-quest" id="quest">🗺 收集 12 颗宝石 · 消灭所有怪物</div>
+<div class="hud h-inv" id="inv"></div>
+<div class="hud h-mm"><canvas id="mm" width="120" height="120"></canvas></div>
+<div class="hud h-keys">WASD移动 · Space跳 · Shift冲刺 · 左键攻击</div>
+<div class="hud h-msg" id="msg"></div>
+<div class="df" id="dmgFlash"></div>
+
+<div class="ov" id="startScr">
+  <h1>幻境<span class="ac">探索</span></h1>
+  <p>在浮岛世界中探索冒险<br>收集散落的宝石，消灭怪物<br><br>WASD 移动 · 鼠标视角 · 左键攻击<br>Space 跳跃 · Shift 冲刺</p>
+  <button id="startBtn" disabled>加载中...</button>
+  <a href="/" class="bk">← 返回平台</a>
+</div>
+<div class="ov hidden" id="endScr">
+  <h1 id="endTitle">🏆 <span class="ac">通关！</span></h1>
+  <div style="font-size:4rem;color:#ffd700;font-weight:900" id="finalScore">0</div>
+  <p id="endMsg"></p>
+  <button id="restartBtn">▶ 再来一次</button>
+  <a href="/" class="bk">← 返回平台</a>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+document.getElementById('loading').classList.add('hidden');
+const startBtn = document.getElementById('startBtn');
+startBtn.disabled = false;
+startBtn.textContent = '▶ 开始探索';
+document.getElementById('restartBtn').addEventListener('click', () => beginGame());
+startBtn.addEventListener('click', () => beginGame());
+
+const cvs = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas: cvs, antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a3a);
+scene.fog = new THREE.FogExp2(0x1a1a3a, 0.008);
+
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 500);
+camera.position.set(0, 5, 10);
+
+scene.add(new THREE.AmbientLight(0x404070, 0.5));
+const sun = new THREE.DirectionalLight(0xffeedd, 1.2);
+sun.position.set(30, 50, 20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -60; sun.shadow.camera.right = 60;
+sun.shadow.camera.top = 60; sun.shadow.camera.bottom = -60;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0x6688cc, 0x445533, 0.4));
+
+function mkTex(w, h, fn) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  fn(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+const grassTex = mkTex(256, 256, (x, w, h) => {
+  x.fillStyle = '#3a6b35'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 4000; i++) {
+    x.fillStyle = `rgba(${40 + Math.random() * 40},${90 + Math.random() * 40},${35 + Math.random() * 30},${0.2 + Math.random() * 0.3})`;
+    x.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 3);
+  }
+});
+grassTex.repeat.set(20, 20);
+
+const stoneTex = mkTex(256, 256, (x, w, h) => {
+  x.fillStyle = '#555560'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2000; i++) {
+    x.fillStyle = `rgba(${55 + Math.random() * 40},${53 + Math.random() * 40},${60 + Math.random() * 40},0.25)`;
+    x.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1 + Math.random() * 3);
+  }
+});
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(120, 120),
+  new THREE.MeshStandardMaterial({ map: grassTex, roughness: 0.9 })
+);
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+const water = new THREE.Mesh(
+  new THREE.PlaneGeometry(120, 120),
+  new THREE.MeshStandardMaterial({ color: 0x2266aa, transparent: true, opacity: 0.6, roughness: 0.1, metalness: 0.3 })
+);
+water.rotation.x = -Math.PI / 2; water.position.y = -0.5; scene.add(water);
+
+const islands = [];
+function addIsland(x, z, r, h) {
+  const m = new THREE.Mesh(
+    new THREE.CylinderGeometry(r * 0.8, r, h, 12),
+    new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.85 })
+  );
+  m.position.set(x, h / 2 - 0.3, z); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  const top = new THREE.Mesh(
+    new THREE.CylinderGeometry(r * 0.8, r * 0.8, 0.3, 12),
+    new THREE.MeshStandardMaterial({ map: grassTex, roughness: 0.9 })
+  );
+  top.position.set(x, h - 0.15, z); top.receiveShadow = true; scene.add(top);
+  islands.push({ x, z, r, h });
+}
+
+addIsland(0, 0, 15, 2);
+addIsland(25, -15, 10, 4);
+addIsland(-20, 20, 12, 3);
+addIsland(35, 25, 8, 5);
+addIsland(-30, -20, 10, 3.5);
+addIsland(0, -35, 9, 4.5);
+addIsland(-40, 0, 7, 6);
+
+for (let i = 0; i < 25; i++) {
+  const isl = islands[Math.floor(Math.random() * islands.length)];
+  const a = Math.random() * Math.PI * 2, d = Math.random() * (isl.r - 2);
+  const tx = isl.x + Math.cos(a) * d, tz = isl.z + Math.sin(a) * d;
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 2, 6), new THREE.MeshStandardMaterial({ color: 0x654321, roughness: 0.9 }));
+  trunk.position.y = 1; trunk.castShadow = true; g.add(trunk);
+  for (let j = 0; j < 3; j++) {
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(1.2 - j * 0.3, 8, 6), new THREE.MeshStandardMaterial({ color: [0x228B22, 0x2E8B57, 0x1a7a1a][j], roughness: 0.8 }));
+    crown.position.y = 2.2 + j * 0.6; crown.castShadow = true; g.add(crown);
+  }
+  g.position.set(tx, isl.h - 0.3, tz); scene.add(g);
+}
+
+for (let i = 0; i < 30; i++) {
+  const isl = islands[Math.floor(Math.random() * islands.length)];
+  const a = Math.random() * Math.PI * 2, d = Math.random() * (isl.r - 1);
+  const s = 0.3 + Math.random() * 0.7;
+  const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.9 }));
+  m.position.set(isl.x + Math.cos(a) * d, isl.h - 0.3 + s / 2, isl.z + Math.sin(a) * d);
+  m.rotation.set(Math.random(), Math.random(), Math.random());
+  m.castShadow = true; scene.add(m);
+}
+
+const crystals = [];
+for (let i = 0; i < 12; i++) {
+  const isl = islands[i % islands.length];
+  const a = Math.random() * Math.PI * 2, d = Math.random() * (isl.r - 2);
+  const hue = Math.random();
+  const col = new THREE.Color().setHSL(hue, 0.8, 0.5);
+  const m = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.4, 0),
+    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.6, transparent: true, opacity: 0.85, roughness: 0.1, metalness: 0.5 })
+  );
+  const cx = isl.x + Math.cos(a) * d, cz = isl.z + Math.sin(a) * d;
+  const baseY = isl.h - 0.3 + 1.2;
+  m.position.set(cx, baseY, cz); m.castShadow = true; scene.add(m);
+  const glow = new THREE.PointLight(col, 0.8, 5);
+  glow.position.copy(m.position); scene.add(glow);
+  crystals.push({ mesh: m, light: glow, collected: false, baseY });
+}
+
+const enemies = [];
+for (let i = 0; i < 8; i++) {
+  const isl = islands[1 + i % (islands.length - 1)];
+  const a = Math.random() * Math.PI * 2, d = Math.random() * (isl.r - 2);
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshStandardMaterial({ color: 0x8b0000, emissive: 0x330000, emissiveIntensity: 0.3, roughness: 0.5 }));
+  body.position.y = 0.8; body.castShadow = true; g.add(body);
+  [[-0.2, 0.95, 0.4], [0.2, 0.95, 0.4]].forEach(([ex, ey, ez]) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 1 }));
+    eye.position.set(ex, ey, ez); g.add(eye);
+  });
+  [[-0.2, 1.35, 0], [0.2, 1.35, 0]].forEach(([hx, hy, hz], idx) => {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5 }));
+    horn.position.set(hx, hy, hz); horn.rotation.z = idx === 0 ? 0.3 : -0.3; g.add(horn);
+  });
+  g.position.set(isl.x + Math.cos(a) * d, isl.h - 0.3, isl.z + Math.sin(a) * d);
+  g.userData = { hp: 3, alive: true, speed: 1.5 + Math.random(), phase: Math.random() * Math.PI * 2, baseY: isl.h - 0.3 };
+  scene.add(g); enemies.push(g);
+}
+
+for (let i = 0; i < 200; i++) {
+  const star = new THREE.Mesh(
+    new THREE.SphereGeometry(0.02 + Math.random() * 0.03, 4, 4),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 + Math.random() * 0.4 })
+  );
+  star.position.set((Math.random() - 0.5) * 200, 20 + Math.random() * 40, (Math.random() - 0.5) * 200);
+  scene.add(star);
+}
+
+const barrierMat = new THREE.MeshStandardMaterial({ color: 0x2244aa, transparent: true, opacity: 0.08, roughness: 0.1, metalness: 0.5 });
+[[-55,5,0,1,12,110],[55,5,0,1,12,110],[0,5,-55,110,12,1],[0,5,55,110,12,1]].forEach(([x,y,z,w,h,d]) => {
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), barrierMat);
+  wall.position.set(x, y, z); scene.add(wall);
+});
+for (let i = 0; i < 15; i++) {
+  const isl = islands[Math.floor(Math.random() * islands.length)];
+  const a = Math.random() * Math.PI * 2, d = Math.random() * (isl.r - 1.5);
+  const px = isl.x + Math.cos(a) * d, pz = isl.z + Math.sin(a) * d;
+  const g = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0x228822, roughness: 0.8 }));
+  stem.position.y = 0.25; g.add(stem);
+  const flowerCol = new THREE.Color().setHSL(Math.random(), 0.8, 0.6);
+  for (let p = 0; p < 5; p++) {
+    const petal = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshStandardMaterial({ color: flowerCol, emissive: flowerCol, emissiveIntensity: 0.2 }));
+    const pa = (p / 5) * Math.PI * 2;
+    petal.position.set(Math.cos(pa) * 0.1, 0.55, Math.sin(pa) * 0.1); g.add(petal);
+  }
+  const center = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), new THREE.MeshStandardMaterial({ color: 0xffdd44 }));
+  center.position.y = 0.55; g.add(center);
+  g.position.set(px, isl.h - 0.3, pz); scene.add(g);
+}
+for (let i = 0; i < 6; i++) {
+  const isl = islands[Math.floor(Math.random() * islands.length)];
+  const a = Math.random() * Math.PI * 2, d = Math.random() * (isl.r - 2);
+  const px = isl.x + Math.cos(a) * d, pz = isl.z + Math.sin(a) * d;
+  const mushG = new THREE.Group();
+  const mStem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0xeeddcc, roughness: 0.7 }));
+  mStem.position.y = 0.15; mushG.add(mStem);
+  const mCap = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: [0xff3333, 0xff6633, 0xaa33ff][i % 3], roughness: 0.5 }));
+  mCap.position.y = 0.3; mushG.add(mCap);
+  for (let s = 0; s < 4; s++) {
+    const spot = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    const sa = (s / 4) * Math.PI * 2;
+    spot.position.set(Math.cos(sa) * 0.12, 0.35, Math.sin(sa) * 0.12); mushG.add(spot);
+  }
+  mushG.position.set(px, isl.h - 0.3, pz); scene.add(mushG);
+}
+
+const playerHeight = 1.7, moveSpeed = 6, sprintMult = 1.8, jumpForce = 8, gravity = 18, friction = 6;
+const WORLD_BOUND = 55;
+const raycaster = new THREE.Raycaster();
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function pt(f, d, t, v) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  try {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = t || 'sine'; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+    g.gain.setValueAtTime(v || 0.08, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + d);
+    o.start(); o.stop(audioCtx.currentTime + d);
+  } catch (e) {}
+}
+
+function getGroundH(x, z) {
+  let maxH = -0.5;
+  for (const isl of islands) {
+    if (Math.hypot(x - isl.x, z - isl.z) < isl.r * 0.8)
+      maxH = Math.max(maxH, isl.h - 0.3);
+  }
+  return maxH;
+}
+
+function showMsg(text, dur) {
+  const el = document.getElementById('msg');
+  el.textContent = text; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur || 2000);
+}
+
+let state = {
+  running: false, hp: 100, score: 0, gemsCollected: 0, kills: 0,
+  yaw: 0, pitch: 0, vy: 0, onGround: true,
+  moveF: false, moveB: false, moveL: false, moveR: false, sprint: false, jump: false,
+  attackCD: 0, vel: new THREE.Vector3()
+};
+
+function updateInv() {
+  const el = document.getElementById('inv'); el.innerHTML = '';
+  [{e: '💎', c: state.gemsCollected}, {e: '⚔', c: 1}, {e: '❤', c: Math.ceil(state.hp / 25)}].forEach(it => {
+    const s = document.createElement('div'); s.className = 'inv-s'; s.textContent = it.e;
+    if (it.c > 1) { const ct = document.createElement('span'); ct.className = 'ct'; ct.textContent = it.c; s.appendChild(ct); }
+    el.appendChild(s);
+  });
+}
+
+function attack() {
+  if (state.attackCD > 0 || !state.running) return;
+  state.attackCD = 0.5;
+  pt(300, 0.08, 'sawtooth', 0.1); pt(150, 0.12, 'square', 0.06);
+  const ch = document.getElementById('crosshair');
+  ch.classList.add('atk'); setTimeout(() => ch.classList.remove('atk'), 200);
+  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  raycaster.set(camera.position, dir);
+  const alive = enemies.filter(e => e.userData.alive);
+  const hits = raycaster.intersectObjects(alive, true);
+  if (hits.length > 0 && hits[0].distance < 4) {
+    let target = hits[0].object;
+    while (target.parent && target.userData.hp === undefined) target = target.parent;
+    if (target.userData && target.userData.alive) {
+      target.userData.hp--;
+      pt(800, 0.06, 'square', 0.08);
+      target.traverse(c => {
+        if (c.isMesh) {
+          c.material.emissive = new THREE.Color(0xff0000);
+          setTimeout(() => { if (c.material) c.material.emissive = new THREE.Color(0x330000); }, 120);
+        }
+      });
+      if (target.userData.hp <= 0) {
+        target.userData.alive = false; target.visible = false;
+        state.kills++; state.score += 100;
+        document.getElementById('kills').textContent = state.kills;
+        document.getElementById('score').textContent = state.score;
+        pt(600, 0.15); setTimeout(() => pt(800, 0.15), 100); setTimeout(() => pt(1000, 0.2), 200);
+        showMsg(`⚔ 击杀怪物 +100`); checkWin();
+      }
+    }
+  }
+}
+
+function takeDamage(amt) {
+  state.hp = Math.max(0, state.hp - amt);
+  document.getElementById('hpBar').style.width = state.hp + '%';
+  document.getElementById('hpVal').textContent = state.hp;
+  document.getElementById('hpBar').style.background = state.hp > 50 ? 'linear-gradient(90deg,#4ade80,#22c55e)' : state.hp > 25 ? 'linear-gradient(90deg,#fbbf24,#f59e0b)' : '#ef4444';
+  pt(100, 0.2, 'sawtooth', 0.1);
+  const f = document.getElementById('dmgFlash'); f.classList.add('show'); setTimeout(() => f.classList.remove('show'), 200);
+  updateInv();
+  if (state.hp <= 0) {
+    state.running = false;
+    showMsg('💀 你被击败了...', 3000);
+    setTimeout(() => {
+      document.getElementById('endTitle').innerHTML = '💀 <span class="ac">失败</span>';
+      document.getElementById('finalScore').textContent = state.score;
+      document.getElementById('endMsg').textContent = `收集 ${state.gemsCollected}/12 宝石 · 击杀 ${state.kills} 怪物`;
+      document.getElementById('endScr').classList.remove('hidden');
+      document.exitPointerLock();
+    }, 1500);
+  }
+}
+
+function checkWin() {
+  if (state.gemsCollected >= 12 && enemies.every(e => !e.userData.alive)) {
+    state.running = false; state.score += 500;
+    showMsg('🏆 通关！', 4000);
+    setTimeout(() => {
+      document.getElementById('endTitle').innerHTML = '🏆 <span class="ac">通关！</span>';
+      document.getElementById('finalScore').textContent = state.score;
+      document.getElementById('endMsg').textContent = `收集 12/12 宝石 · 击杀 ${state.kills} 怪物`;
+      document.getElementById('endScr').classList.remove('hidden');
+      const best = parseInt(localStorage.getItem('highscore_adventure') || '0');
+      if (state.score > best) localStorage.setItem('highscore_adventure', state.score);
+      document.exitPointerLock();
+    }, 2000);
+  }
+}
+
+function drawMinimap() {
+  const mc = document.getElementById('mm'), mx = mc.getContext('2d'), cw = mc.width, ch = mc.height;
+  mx.clearRect(0, 0, cw, ch);
+  mx.fillStyle = 'rgba(26,26,58,0.4)'; mx.fillRect(0, 0, cw, ch);
+  const scale = cw / 100, cx = cw / 2, cy = ch / 2;
+  islands.forEach(isl => {
+    mx.fillStyle = 'rgba(58,107,53,0.4)'; mx.beginPath();
+    mx.arc(cx + (isl.x - camera.position.x) * scale, cy + (isl.z - camera.position.z) * scale, isl.r * scale, 0, Math.PI * 2); mx.fill();
+  });
+  crystals.forEach(cr => {
+    if (cr.collected) return;
+    mx.fillStyle = '#ffd700'; mx.beginPath();
+    mx.arc(cx + (cr.mesh.position.x - camera.position.x) * scale, cy + (cr.mesh.position.z - camera.position.z) * scale, 2, 0, Math.PI * 2); mx.fill();
+  });
+  enemies.forEach(e => {
+    if (!e.userData.alive) return;
+    mx.fillStyle = '#ef4444'; mx.beginPath();
+    mx.arc(cx + (e.position.x - camera.position.x) * scale, cy + (e.position.z - camera.position.z) * scale, 2.5, 0, Math.PI * 2); mx.fill();
+  });
+  mx.fillStyle = '#4ade80'; mx.beginPath(); mx.arc(cx, cy, 3, 0, Math.PI * 2); mx.fill();
+}
+
+function beginGame() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  document.getElementById('startScr').classList.add('hidden');
+  document.getElementById('endScr').classList.add('hidden');
+  state = {
+    running: true, hp: 100, score: 0, gemsCollected: 0, kills: 0,
+    yaw: 0, pitch: 0, vy: 0, onGround: true,
+    moveF: false, moveB: false, moveL: false, moveR: false, sprint: false, jump: false,
+    attackCD: 0, vel: new THREE.Vector3()
+  };
+  camera.position.set(0, islands[0].h + playerHeight, 5);
+  camera.rotation.set(0, 0, 0);
+  crystals.forEach(cr => { cr.collected = false; cr.mesh.visible = true; cr.light.visible = true; });
+  enemies.forEach(e => { e.userData.alive = true; e.userData.hp = 3; e.visible = true; });
+  document.getElementById('hpBar').style.width = '100%';
+  document.getElementById('hpBar').style.background = 'linear-gradient(90deg,#4ade80,#22c55e)';
+  document.getElementById('hpVal').textContent = '100';
+  document.getElementById('gems').textContent = '0';
+  document.getElementById('kills').textContent = '0';
+  document.getElementById('score').textContent = '0';
+  updateInv();
+  cvs.requestPointerLock();
+}
+
+let lastT = 0;
+function animate(time) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((time - lastT) / 1000, 0.05);
+  lastT = time;
+
+  if (!state.running) { renderer.render(scene, camera); return; }
+
+  const now = performance.now();
+  const md = new THREE.Vector3();
+  if (state.moveF) md.z -= 1; if (state.moveB) md.z += 1;
+  if (state.moveL) md.x -= 1; if (state.moveR) md.x += 1;
+  if (md.length() > 0) {
+    md.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), state.yaw);
+    const spd = moveSpeed * (state.sprint ? sprintMult : 1);
+    state.vel.x += md.x * spd * dt * 10;
+    state.vel.z += md.z * spd * dt * 10;
+  }
+  state.vel.x -= state.vel.x * friction * dt;
+  state.vel.z -= state.vel.z * friction * dt;
+
+  if (state.jump && state.onGround) { state.vy = jumpForce; state.onGround = false; pt(400, 0.04, 'sine', 0.03); }
+  state.vy -= gravity * dt;
+
+  const nextX = camera.position.x + state.vel.x * dt;
+  const nextZ = camera.position.z + state.vel.z * dt;
+  const nextY = camera.position.y + state.vy * dt;
+
+  camera.position.x = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, nextX));
+  camera.position.z = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, nextZ));
+  camera.position.y = nextY;
+
+  if (Math.abs(nextX) > WORLD_BOUND || Math.abs(nextZ) > WORLD_BOUND) {
+    state.vel.x *= -0.5; state.vel.z *= -0.5;
+    if (!state._boundWarn) { showMsg('⚠ 已到达世界边界！', 1500); state._boundWarn = true; setTimeout(() => state._boundWarn = false, 3000); }
+  }
+
+  const gH = getGroundH(camera.position.x, camera.position.z) + playerHeight;
+  if (camera.position.y <= gH) { camera.position.y = gH; state.vy = 0; state.onGround = true; }
+
+  const waterLevel = -0.5 + playerHeight;
+  if (camera.position.y < waterLevel) {
+    camera.position.y = waterLevel; state.vy = 0; state.onGround = true;
+    if (!state._waterWarn) { takeDamage(2); showMsg('⚠ 水中! 持续受伤', 1000); state._waterWarn = true; setTimeout(() => state._waterWarn = false, 2000); }
+  }
+
+  camera.position.y += Math.sin(time * 0.008) * (md.length() > 0 ? 0.025 : 0.004);
+  if (state.attackCD > 0) state.attackCD -= dt;
+
+  crystals.forEach(cr => {
+    if (cr.collected) return;
+    cr.mesh.rotation.y += dt * 1.5;
+    cr.mesh.position.y = cr.baseY + Math.sin(now * 0.002) * 0.3;
+    cr.light.position.copy(cr.mesh.position);
+    if (camera.position.distanceTo(cr.mesh.position) < 2.5) {
+      cr.collected = true; cr.mesh.visible = false; cr.light.visible = false;
+      state.gemsCollected++; state.score += 50;
+      document.getElementById('gems').textContent = state.gemsCollected;
+      document.getElementById('score').textContent = state.score;
+      pt(1000, 0.1); setTimeout(() => pt(1200, 0.1), 80); setTimeout(() => pt(1500, 0.15), 160);
+      showMsg(`💎 宝石 ${state.gemsCollected}/12 (+50)`);
+      updateInv(); checkWin();
+    }
+  });
+
+  enemies.forEach(e => {
+    if (!e.userData.alive) return;
+    e.userData.phase += dt * 3;
+    if (e.children[0]) e.children[0].position.y = 0.8 + Math.sin(e.userData.phase) * 0.15;
+    const dist = camera.position.distanceTo(e.position);
+    if (dist < 25) {
+      const dir = new THREE.Vector3().subVectors(camera.position, e.position); dir.y = 0; dir.normalize();
+      e.position.add(dir.clone().multiplyScalar(e.userData.speed * dt));
+      e.lookAt(camera.position.x, e.position.y, camera.position.z);
+      const eGH = getGroundH(e.position.x, e.position.z);
+      e.position.y = Math.max(eGH, e.userData.baseY);
+    }
+    if (dist < 1.8) {
+      takeDamage(8);
+      const push = new THREE.Vector3().subVectors(camera.position, e.position).normalize().multiplyScalar(3);
+      camera.position.add(push.clone().multiplyScalar(dt * 5));
+    }
+  });
+
+  water.material.opacity = 0.5 + Math.sin(now * 0.001) * 0.1;
+  drawMinimap();
+  renderer.render(scene, camera);
+}
+
+document.addEventListener('mousemove', e => {
+  if (document.pointerLockElement !== cvs) return;
+  state.yaw -= e.movementX * 0.002;
+  state.pitch -= e.movementY * 0.002;
+  state.pitch = Math.max(-1.4, Math.min(1.4, state.pitch));
+  camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
+});
+
+document.addEventListener('mousedown', e => {
+  if (e.button === 0 && document.pointerLockElement === cvs) attack();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'w' || e.key === 'W') state.moveF = true;
+  if (e.key === 's' || e.key === 'S') state.moveB = true;
+  if (e.key === 'a' || e.key === 'A') state.moveL = true;
+  if (e.key === 'd' || e.key === 'D') state.moveR = true;
+  if (e.key === 'Shift') state.sprint = true;
+  if (e.key === ' ') { e.preventDefault(); state.jump = true; }
+});
+
+document.addEventListener('keyup', e => {
+  if (e.key === 'w' || e.key === 'W') state.moveF = false;
+  if (e.key === 's' || e.key === 'S') state.moveB = false;
+  if (e.key === 'a' || e.key === 'A') state.moveL = false;
+  if (e.key === 'd' || e.key === 'D') state.moveR = false;
+  if (e.key === 'Shift') state.sprint = false;
+  if (e.key === ' ') state.jump = false;
+});
+
+cvs.addEventListener('click', () => {
+  if (state.running && document.pointerLockElement !== cvs) cvs.requestPointerLock();
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

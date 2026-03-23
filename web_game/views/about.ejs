@@ -1,0 +1,26 @@
+<%- include('partials/header') %>
+
+<section class="page-content">
+  <h1>关于 MyWeb</h1>
+  <p>这是一个使用以下技术栈搭建的全栈 Web 应用：</p>
+  <ul>
+    <li><strong>运行时：</strong>Node.js</li>
+    <li><strong>框架：</strong>Express.js</li>
+    <li><strong>模板引擎：</strong>EJS</li>
+    <li><strong>前端：</strong>原生 HTML / CSS / JavaScript</li>
+  </ul>
+  <h2>项目结构</h2>
+  <pre><code>myweb/
+├── server.js          # 服务器入口
+├── views/             # EJS 模板
+│   ├── partials/      # 公共头部/底部
+│   ├── index.ejs      # 首页
+│   ├── about.ejs      # 关于页
+│   └── 404.ejs        # 404 页面
+├── public/            # 静态资源
+│   ├── css/
+│   └── js/
+└── package.json</code></pre>
+</section>
+
+<%- include('partials/footer') %>
