@@ -68,11 +68,13 @@ function applyGravity(){const types=getTypes();let fell=false;for(let c=0;c<GRID
 function hasValidMoves(){for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++){if(c+1<GRID){[board[r][c],board[r][c+1]]=[board[r][c+1],board[r][c]];if(findMatches().length>0){[board[r][c],board[r][c+1]]=[board[r][c+1],board[r][c]];return true}[board[r][c],board[r][c+1]]=[board[r][c+1],board[r][c]]}if(r+1<GRID){[board[r][c],board[r+1][c]]=[board[r+1][c],board[r][c]];if(findMatches().length>0){[board[r][c],board[r+1][c]]=[board[r+1][c],board[r][c]];return true}[board[r][c],board[r+1][c]]=[board[r+1][c],board[r][c]]}}return false}
 function shuffleBoard(){const flat=board.flat();for(let i=flat.length-1;i>0;i--){const j=0|Math.random()*(i+1);[flat[i],flat[j]]=[flat[j],flat[i]]}for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++)board[r][c]=flat[r*GRID+c]}
 function cellPos(r,c){return{x:PAD+c*(CELL+GAP),y:PAD+r*(CELL+GAP)}}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='rgba(255,255,255,0.02)';ctx.fillRect(0,0,canvas.width,canvas.height);
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.fillStyle='rgba(20,18,40,0.95)';ctx.fillRect(0,0,canvas.width,canvas.height);
 for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++){const{x,y}=cellPos(r,c);const rad=10;
-ctx.fillStyle=(r+c)%2===0?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.02)';ctx.beginPath();ctx.moveTo(x+rad,y);ctx.lineTo(x+CELL-rad,y);ctx.quadraticCurveTo(x+CELL,y,x+CELL,y+rad);ctx.lineTo(x+CELL,y+CELL-rad);ctx.quadraticCurveTo(x+CELL,y+CELL,x+CELL-rad,y+CELL);ctx.lineTo(x+rad,y+CELL);ctx.quadraticCurveTo(x,y+CELL,x,y+CELL-rad);ctx.lineTo(x,y+rad);ctx.quadraticCurveTo(x,y,x+rad,y);ctx.closePath();ctx.fill();
-if(board[r][c]){ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(board[r][c],x+CELL/2,y+CELL/2+2)}}
-if(selected){const{x,y}=cellPos(selected.r,selected.c);ctx.strokeStyle='rgba(255,215,0,0.7)';ctx.lineWidth=3;ctx.strokeRect(x-2,y-2,CELL+4,CELL+4);ctx.fillStyle='rgba(255,215,0,0.08)';ctx.fillRect(x,y,CELL,CELL)}
+ctx.save();ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=6;ctx.shadowOffsetY=2;
+ctx.fillStyle=(r+c)%2===0?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.07)';ctx.beginPath();ctx.moveTo(x+rad,y);ctx.lineTo(x+CELL-rad,y);ctx.quadraticCurveTo(x+CELL,y,x+CELL,y+rad);ctx.lineTo(x+CELL,y+CELL-rad);ctx.quadraticCurveTo(x+CELL,y+CELL,x+CELL-rad,y+CELL);ctx.lineTo(x+rad,y+CELL);ctx.quadraticCurveTo(x,y+CELL,x,y+CELL-rad);ctx.lineTo(x,y+rad);ctx.quadraticCurveTo(x,y,x+rad,y);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=0.5;ctx.stroke();ctx.shadowColor='transparent';
+if(board[r][c]){ctx.font='32px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(board[r][c],x+CELL/2,y+CELL/2+2)}ctx.restore()}
+if(selected){const{x,y}=cellPos(selected.r,selected.c);ctx.strokeStyle='rgba(255,215,0,0.8)';ctx.lineWidth=3;ctx.strokeRect(x-2,y-2,CELL+4,CELL+4);ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fillRect(x,y,CELL,CELL)}
 pX.clearRect(0,0,pC.width,pC.height);scP=scP.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.life-=0.022;p.sz*=0.97;if(p.life<=0)return false;pX.globalAlpha=p.life;pX.fillStyle=p.col;pX.beginPath();pX.arc(p.x,p.y,p.sz,0,Math.PI*2);pX.fill();return true});pX.globalAlpha=1;
 requestAnimationFrame(draw)}
 async function processMatches(){animating=true;comboCount=0;
